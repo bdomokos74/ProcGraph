@@ -1,0 +1,24 @@
+<ivy-module version="2.0">
+    <info organisation="org.bds" module="ProcGraph" revision="1.0.0"/>
+
+    <!--TODO rename this project to ImageBankLib -->
+
+    <configurations>
+        <conf name="nodeploy"/>
+        <conf name="default"/>
+        <conf name="runtime"/>
+        <conf name="test"/>
+        <conf name="script"/>
+    </configurations>
+    <dependencies>
+
+        <dependency org="junit" name="junit" rev="4.6" conf="test->default"/>
+        <dependency org="org.easymock" name="easymockclassextension" rev="2.4" conf="test->default"/>
+
+        <dependency org="log4j" name="log4j" rev="1.2.14" conf="default->default"/>
+        <dependency org="org.slf4j" name="slf4j-log4j12" rev="1.4.2" conf="default->default"/>
+
+        <dependency org="jgrapht" name="jgrapht" rev="0.7.3"/>
+
+    </dependencies>
+</ivy-module>

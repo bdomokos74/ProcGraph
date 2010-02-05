@@ -1,0 +1,50 @@
+<?xml version="1.0"?>
+<project xmlns:ivy="antlib:org.apache.ivy.ant" xmlns:artifact="antlib:org.apache.maven.artifact.ant"
+         name="common-standalone" default="build-jar" basedir=".">
+
+    <import file="common.xml"/>
+
+    <property name="standaloneContent.dir" value="${root.dir}/standaloneContent"/>
+
+    <property name="lib.dir" value="${dist.dir}/lib"/>
+    <property name="main.class" value="${main.class}"/>
+
+    <property file="${root.dir}/repository.properties"/>
+    <check-prop propname="repo.url"/>
+    <check-prop propname="repo.username"/>
+    <check-prop propname="repo.password"/>
+
+    <check-prop propname="main.class"/>
+
+    <target name="build-jar" depends="compile">
+
+        <mkdir dir="${dist.dir}"/>
+        <mkdir dir="${lib.dir}"/>
+
+        <ivy:retrieve pattern="${lib.dir}/[artifact]-[revision].jar" conf="default, runtime"/>
+
+        <manifestclasspath property="jar.classpath" jarfile="${dist.dir}/${ant.project.name}.jar">
+            <classpath >
+                <fileset dir="${lib.dir}">
+                    <include name="*.jar" />
+                </fileset>
+            </classpath>
+        </manifestclasspath>
+
+        <property name="jar.classpath" value="dummy" />
+
+        <jar destfile="${dist.dir}/${ant.project.name}.jar" basedir="${compile.dir}">
+            <manifest>
+                <attribute name="Class-Path" value="${jar.classpath}"/>
+                <attribute name="Main-Class" value="${main.class}" />
+            </manifest>
+            <fileset dir="${resources.dir}"/>
+        </jar>
+
+        <copy todir="${dist.dir}" >
+            <fileset dir="${standaloneContent.dir}" />
+        </copy>
+
+    </target>
+
+</project>

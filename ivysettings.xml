@@ -1,0 +1,14 @@
+<ivysettings>
+    <settings defaultResolver="chain"/>
+    
+    <resolvers>
+        <chain name="chain">
+            <ibiblio name="public" m2compatible="true"
+                     root="http://nexus.intranet.office:8111/nexus-webapp-1.4.0/content/groups/public/"/>
+            <ibiblio name="astrid_repo" m2compatible="true"
+                     root="http://nexus:8111/nexus-webapp-1.4.0/content/repositories/AstridRepo/">
+                     </ibiblio>
+        </chain>
+    </resolvers>
+</ivysettings>
+

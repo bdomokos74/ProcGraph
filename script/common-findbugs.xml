@@ -1,0 +1,40 @@
+<?xml version="1.0"?>
+<project name="common-findbugs" basedir=".">
+
+    <!-- requirement -->
+    <!-- the FINDBUGS_HOME must be set -->
+    <property name="target.dir" value="${target.dir}"/>
+    <property name="src.dir" value="${src.dir}"/>
+    <property name="dist.dir" value="${dist.dir}"/>
+
+    <property name="findbugs.jvmargs" value="-server -Xss1m -Xmx800m -Duser.language=en -Duser.region=EN -Dfindbugs.home=${env.FINDBUGS_HOME}"/>
+    <property name="findbugs.report.dir" value="${target.dir}/reports/findbugs"/>
+
+    <target name="analyze" depends="build-jar">
+
+        <mkdir dir="${findbugs.report.dir}"/>
+
+        <taskdef name="findbugs" classname="edu.umd.cs.findbugs.anttask.FindBugsTask">
+            <classpath>
+                <fileset dir="${env.FINDBUGS_HOME}/lib/"/>
+            </classpath>
+        </taskdef>
+
+        <findbugs home="${env.FINDBUGS_HOME}"
+                  output="xml:withMessages"
+                  timeout="90000000"
+                  reportLevel="experimental"
+                  workHard="true"
+                  effort="max"
+                  adjustExperimental="true"
+                  jvmargs="${findbugs.jvmargs}"
+                  failOnError="true"
+                  outputFile="${findbugs.report.dir}/analyze.xml"
+                  projectName="Findbugs"
+                  debug="true">
+            <sourcePath path="${src.dir}"/>
+            <class location="${dist.dir}/${ant.project.name}.jar"/>
+        </findbugs>
+    </target>
+
+</project>

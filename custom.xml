@@ -1,0 +1,144 @@
+<project name="custom">
+    <property name="database.dir" value="${target.dir}/hsqldb"/>
+
+    <target name="db.start" depends="init"
+            description="-> Starts HSQL database server with clean DB">
+        <delete dir="${database.dir}"/>
+        <java classname="org.hsqldb.Server"
+              fork="yes"
+              failonerror="true">
+            <arg value="-database.0"/>
+            <arg value="file:${database.dir}/db"/>
+            <classpath>
+                <pathelement location="${compile.dir}"/>
+                <pathelement location="${test.compile.dir}"/>
+                <path refid="test.compile.classpath"/>
+            </classpath>
+        </java>
+    </target>
+
+    <target name="db.stop" depends="init"
+            description="-> Shuts down the HSQL database server.">
+        <sql
+                classpathref="test.compile.classpath"
+                driver="org.hsqldb.jdbcDriver"
+                url="jdbc:hsqldb:hsql://localhost"
+                userid="sa" password=""
+                autocommit="true">SHUTDOWN
+        </sql>
+    </target>
+
+    <target name="systemtest.start"
+            description="-> Starts the HSQLDB, runs the system tests against it, then shuts down the database.">
+        <parallel>
+            <sequential>
+                <antcall target="db.start"/>
+            </sequential>
+            <sequential>
+                <waitfor maxwait="10000" checkevery="1000" timeoutproperty="db.start.timeout">
+                    <socket server="127.0.0.1" port="9001"/>
+                </waitfor>
+                <antcall target="system-test-nofail"/>
+                <antcall target="db.stop"/>
+            </sequential>
+        </parallel>
+    </target>
+
+    <target name="import.drive" depends="init, compile"
+            description="-> Imports a drive database from filesystem into the application's database">
+        <java classname="hu.kripto.drscreendb.tools.ImportDrive">
+            <classpath>
+                <pathelement location="${compile.dir}"/>
+                <pathelement location="${test.compile.dir}"/>
+                <path refid="test.compile.classpath"/>
+            </classpath>
+            <arg value="${db.driver}"/>
+            <arg value="${db.url}"/>
+            <arg value="${db.user}"/>
+            <arg value="${db.pass}"/>
+            <arg value="${db.importdir}"/>
+        </java>
+    </target>
+
+    <target name="schemaspy" depends="init"
+            description="-> Starts the database, runs the system tests, then runs schemaspy to generate DB structure.">
+        <parallel>
+            <sequential>
+                <antcall target="db.start"/>
+            </sequential>
+            <sequential>
+                <waitfor maxwait="10000" checkevery="1000" timeoutproperty="db.start.timeout">
+                    <socket server="127.0.0.1" port="9001"/>
+                </waitfor>
+                <antcall target="system-test-nofail"/>
+                <property name="schemaspy.dir" value="${target.dir}/schemaspy"/>
+                <property name="schemaspy.db" value="''"/>
+                <mkdir dir="${schemaspy.dir}"/>
+                <java classname="net.sourceforge.schemaspy.Main" fork="true">
+                    <classpath>
+                        <path refid="script.classpath"/>
+                    </classpath>
+                    <arg line="-t hsqldb"/>
+                    <arg line="-db ${schemaspy.db}"/>
+                    <arg line="-host localhost"/>
+                    <arg line="-port 9001"/>
+                    <arg line="-u sa"/>
+                    <arg line="-s PUBLIC"/>
+                    <arg line="-o ${schemaspy.dir}"/>
+                </java>
+                <antcall target="db.stop"/>
+                <zip destfile="${target.dir}/schemaspy.zip" basedir="${schemaspy.dir}"/>
+            </sequential>
+        </parallel>
+    </target>
+
+    <target name="publish-if-systemtests-ok">
+        <parallel>
+            <sequential>
+                <antcall target="db.start"/>
+            </sequential>
+            <sequential>
+                <waitfor maxwait="10000" checkevery="1000" timeoutproperty="db.start.timeout">
+                    <socket server="127.0.0.1" port="9001"/>
+                </waitfor>
+                <antcall target="system-test-nofail"/>
+                <antcall target="db.stop"/>
+                <fail if="system.tests.failed">
+                </fail>
+                <antcall target="-publish"/>
+            </sequential>
+        </parallel>
+    </target>
+
+    <!-- PMD static code analysis-->
+    <target name="pmd" depends="init">
+        <mkdir dir="${target.dir}/pmd"/>
+        <taskdef name="pmd" classname="net.sourceforge.pmd.ant.PMDTask">
+            <classpath>
+                <path refid="script.classpath"/>
+            </classpath>
+        </taskdef>
+        <pmd rulesetfiles="imports,unusedcode,basic,design">
+            <formatter type="html" toFile="${target.dir}/pmd/pmd_report.html"/>
+            <fileset dir="${src.dir}">
+                <include name="**/*.java"/>
+            </fileset>
+        </pmd>
+    </target>
+
+    <!-- Copy paste detector -->
+    <target name="cpd" depends="init">
+        <mkdir dir="${target.dir}/pmd"/>
+        <taskdef name="cpd" classname="net.sourceforge.pmd.cpd.CPDTask">
+            <classpath>
+                <path refid="script.classpath"/>
+            </classpath>
+        </taskdef>
+        <cpd minimumTokenCount="100" outputFile="${target.dir}/pmd/cpd_report.txt">
+            <fileset dir="${src.dir}">
+                <include name="**/*.java"/>
+            </fileset>
+        </cpd>
+    </target>
+
+</project>

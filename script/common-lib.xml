@@ -1,0 +1,61 @@
+<?xml version="1.0"?>
+<project xmlns:ivy="antlib:org.apache.ivy.ant" xmlns:artifact="antlib:org.apache.maven.artifact.ant"
+         name="common-lib" basedir=".">
+
+    <import file="common.xml"/>
+
+    <property name="lib.dir" value="${dist.dir}/lib"/>
+
+    <property file="${root.dir}/repository.properties"/>
+    <check-prop propname="repo.url"/>
+    <check-prop propname="repo.username"/>
+    <check-prop propname="repo.password"/>
+
+
+    <target name="build-jar" depends="compile">
+
+        <mkdir dir="${dist.dir}"/>
+        <mkdir dir="${lib.dir}"/>
+
+        <ivy:retrieve pattern="${lib.dir}/[artifact]-[revision].jar" conf="default, runtime"/>
+
+        <manifestclasspath property="jar.classpath" jarfile="${dist.dir}/${ant.project.name}.jar">
+            <classpath>
+                <fileset dir="${lib.dir}">
+                    <include name="*.jar"/>
+                </fileset>
+            </classpath>
+        </manifestclasspath>
+
+        <property name="jar.classpath" value="dummy"/>
+
+        <jar destfile="${dist.dir}/${ant.project.name}.jar" basedir="${compile.dir}">
+            <manifest>
+                <attribute name="Class-Path" value="${jar.classpath}"/>
+            </manifest>
+            <fileset dir="${resources.dir}"/>
+        </jar>
+    </target>
+
+    <target name="-publish" depends="build-jar">
+
+        <typedef resource="org/apache/maven/artifact/ant/antlib.xml"
+                 uri="antlib:org.apache.maven.artifact.ant"
+                 classpathref="script.classpath"/>
+
+        <ivy:makepom ivyfile="${root.dir}/ivy.xml" pomfile="${dist.dir}/pom.xml">
+            <mapping conf="default" scope="compile"/>
+        </ivy:makepom>
+
+        <artifact:deploy file="${dist.dir}/${ant.project.name}.jar">
+            <remoteRepository url="${repo.url}">
+                <authentication username="${repo.username}" password="${repo.password}"/>
+            </remoteRepository>
+            <pom file="${dist.dir}/pom.xml"/>
+        </artifact:deploy>
+
+        <delete file="${dist.dir}/pom.xml"/>
+    </target>
+
+    <target name="publish-if-tests-ok" depends="test, -publish" />
+</project>

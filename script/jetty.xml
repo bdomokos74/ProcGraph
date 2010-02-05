@@ -1,0 +1,20 @@
+<project name="jetty">
+
+    <target name="jetty.init" depends="init">
+        <taskdef resource="tasks.properties" loaderref="jetty.loader">
+            <classpath>
+                <path refid="script.classpath"/>
+                <path refid="runtime.classpath"/>
+            </classpath>
+        </taskdef>
+    </target>
+
+    <target name="jetty.start" depends="jetty.init">
+        <mkdir dir="${target.dir}/temp"/>
+        <echo message="ant.project.name = ${ant.project.name}" />
+        <jetty tempDirectory="${target.dir}/temp" >
+            <webApp name="${ant.project.name}" warfile="${war.file}" contextpath="/${webapp.name}"/>
+        </jetty>
+    </target>
+
+</project>

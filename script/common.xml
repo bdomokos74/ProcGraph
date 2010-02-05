@@ -1,0 +1,315 @@
+<?xml version="1.0"?>
+<project xmlns:ivy="antlib:org.apache.ivy.ant"
+         name="common" basedir=".">
+
+    <macrodef name="check-prop">
+        <attribute name="propname"/>
+        <sequential>
+            <fail unless="@{propname}"
+                  message="Property @{propname} must be set."/>
+        </sequential>
+    </macrodef>
+
+    <!-- common structure of the project -->
+
+    <dirname property="common.root.dir" file="${ant.file.common}"/>
+    <property name="root.dir" value="${common.root.dir}/.."/>
+
+    <property name="target.dir" value="${root.dir}/target"/>
+    <property name="dist.dir" value="${target.dir}/dist"/>
+
+    <property name="main.dir" location="${root.dir}/src/main"/>
+    <property name="src.dir" location="${main.dir}/java"/>
+    <property name="resources.dir" location="${main.dir}/resources"/>
+    <property name="compile.dir" value="${target.dir}/classes"/>
+
+    <property name="test.dir" location="${root.dir}/src/test"/>
+    <property name="test.src.dir" location="${test.dir}/java"/>
+    <property name="test.resources.dir" location="${test.dir}/resources"/>
+    <property name="test.compile.dir" value="${target.dir}/test-classes"/>
+
+    <property name="systemtest.compile.dir" value="${target.dir}/systemtest-classes"/>
+    <property name="systemtest.src.dir" value="${root.dir}/src/systemtest/java"/>
+    <property name="systemtest.resources.dir" value="${root.dir}/src/systemtest/resources"/>
+    <property name="systemtest.report.dir" value="${target.dir}/reports/systemtest"/>
+
+    <property name="javadoc.dir" value="${target.dir}/javadoc"/>
+
+    <!-- reports -->
+    <property name="ivy.report.dir" value="${target.dir}/reports/ivy-reports"/>
+    <property name="test.report.dir" value="${target.dir}/reports"/>
+
+    <!-- ivy properties -->
+    <property name="ivy.install.version" value="2.1.0-rc2"/>
+    <property name="ivy.home" value="${user.home}/.ant"/>
+    <property name="ivy.jar.dir" value="${ivy.home}/lib"/>
+    <property name="ivy.jar.file" value="${ivy.jar.dir}/ivy.jar"/>
+    <available file="${ivy.jar.file}" property="ivy.jar.found"/>
+
+    <condition property="ivy.home" value="${env.IVY_HOME}">
+        <isset property="env.IVY_HOME"/>
+    </condition>
+
+    <!-- download ivy files -->
+    <target name="download-ivy" unless="ivy.jar.found">
+
+        <mkdir dir="${ivy.jar.dir}"/>
+
+        <get src="http://repo1.maven.org/maven2/org/apache/ivy/ivy/${ivy.install.version}/ivy-${ivy.install.version}.jar"
+             dest="${ivy.jar.file}" usetimestamp="true"/>
+
+    </target>
+
+    <target name="init-ivy" depends="download-ivy" >
+
+        <path id="ivy.lib.path">
+            <fileset dir="${ivy.jar.dir}" includes="*.jar"/>
+        </path>
+
+        <taskdef resource="org/apache/ivy/ant/antlib.xml"
+                 uri="antlib:org.apache.ivy.ant" classpathref="ivy.lib.path"/>
+    </target>
+
+    <target name="ivy-clean-cache">
+        <ivy:cleancache/>
+    </target>
+
+    <target name="-pre-init"/>
+    <target name="-post-init"/>
+
+    <target name="init" depends="init-ivy">
+
+        <antcall target="-pre-init"/>
+
+        <mkdir dir="${compile.dir}"/>
+        <mkdir dir="${test.compile.dir}"/>
+        <mkdir dir="${test.report.dir}"/>
+
+        <property name="ivy.settings.file" value="ivysettings.xml"/>
+        <ivy:settings file="${ivy.settings.file}"/>
+        <ivy:resolve/>
+
+        <path id="compile.classpath"/>
+        <!-- just to avoid the red marks with syntax highlight -->
+        <ivy:cachepath pathid="compile.classpath" conf="default, nodeploy"/>
+
+        <path id="test.compile.classpath"/>
+        <ivy:cachepath pathid="test.compile.classpath" conf="default, nodeploy, test"/>
+        <!--<property name="test.compile.classpath" value="dontcare"/>-->
+
+        <path id="script.classpath"/>
+        <ivy:cachepath pathid="script.classpath" conf="script"/>
+        <!--<property name="script.classpath" value="dontcare"/>-->
+
+        <path id="runtime.classpath"/>
+        <ivy:cachepath pathid="runtime.classpath" conf="default, runtime"/>
+
+        <property environment="env"/>
+
+        <antcall target="-post-init"/>
+
+    </target>
+
+    <target name="-pre-compile"/>
+    <target name="-post-compile"/>
+
+    <target name="compile" depends="init">
+
+        <antcall target="-pre-compile"/>
+
+        <javac srcdir="${src.dir}" includes="**/*.java" encoding="utf-8"
+               destdir="${compile.dir}"
+               debug="true">
+            <classpath>
+                <path refid="compile.classpath"/>
+            </classpath>
+        </javac>
+        <copy todir="${compile.dir}">
+            <fileset dir="${resources.dir}">
+                <exclude name="**/*.java"/>
+            </fileset>
+        </copy>
+
+        <antcall target="-post-compile"/>
+
+    </target>
+
+    <target name="-pre-test-compile"/>
+    <target name="-post-test-compile"/>
+
+    <target name="test-compile" depends="compile">
+
+        <antcall target="-pre-test-compile"/>
+
+        <javac srcdir="${test.src.dir}" includes="**/*.java" encoding="utf-8"
+               destdir="${test.compile.dir}"
+               debug="true">
+            <classpath>
+                <path refid="test.compile.classpath"/>
+                <pathelement location="${compile.dir}"/>
+            </classpath>
+        </javac>
+        <copy todir="${test.compile.dir}">
+            <fileset dir="${test.resources.dir}">
+                <exclude name="**/*.java"/>
+            </fileset>
+        </copy>
+
+        <antcall target="-post-test-compile"/>
+
+    </target>
+
+    <target name="-pre-test"/>
+    <target name="-post-test"/>
+
+    <target name="test" depends="test-compile" description="-> Runs the JUnit tests">
+
+        <antcall target="-pre-test"/>
+
+        <junit printsummary="yes" errorproperty="test.failed" failureproperty="test.failed">
+            <formatter type="xml"/>
+            <classpath>
+                <pathelement location="${test.compile.dir}"/>
+                <pathelement location="${compile.dir}"/>
+                <path refid="compile.classpath"/>
+                <path refid="test.compile.classpath"/>
+            </classpath>
+            <batchtest fork="yes" todir="${test.report.dir}">
+                <fileset dir="${test.src.dir}">
+                    <include name="**/*Test.java"/>
+                </fileset>
+            </batchtest>
+        </junit>
+
+        <junitreport todir="${test.report.dir}">
+            <fileset dir="${test.report.dir}">
+                <include name="TEST-*.xml"/>
+            </fileset>
+            <report format="frames" todir="${test.report.dir}/html"/>
+        </junitreport>
+
+        <fail if="test.failed">
+            Tests failed. Check ${test.report.dir}.
+        </fail>
+
+        <antcall target="-post-test"/>
+    </target>
+
+
+    <target name="systemtest-compile-java" depends="system-test-init, compile">
+        <javac srcdir="${systemtest.src.dir}" includes="**/*.java" encoding="utf-8"
+               destdir="${systemtest.compile.dir}"
+               debug="true">
+            <classpath>
+                <path refid="compile.classpath"/>
+                <path refid="test.compile.classpath"/>
+                <pathelement location="${compile.dir}"/>
+                <pathelement location="${resources.dir}"/>
+            </classpath>
+        </javac>
+    </target>
+
+    <target name="system-test-init" depends="init">
+
+        <mkdir dir="${systemtest.compile.dir}"/>
+
+    </target>
+
+    <target name="systemtest-compile" depends="system-test-init, systemtest-compile-java">
+
+    </target>
+
+    <target name="system-test" depends="system-test-nofail">
+        <fail if="system.tests.failed">
+            System tests failed, check ${test.report.dir}.
+        </fail>
+    </target>
+    <target name="system-test-nofail" depends="system-test-init, systemtest-compile">
+
+        <echo message="Running system tests..."/>
+
+        <mkdir dir="${systemtest.report.dir}"/>
+
+        <junit printsummary="yes" failureproperty="system.tests.failed" errorproperty="system.tests.failed">
+            <!-- TODO: xml -->
+            <formatter type="xml"/>
+            <classpath>
+                <pathelement location="${compile.dir}"/>
+                <pathelement location="${resources.dir}"/>
+                <pathelement location="${systemtest.compile.dir}"/>
+                <pathelement location="${systemtest.resources.dir}"/>
+                <path refid="compile.classpath"/>
+                <path refid="test.compile.classpath"/>
+            </classpath>
+            <batchtest fork="yes" todir="${systemtest.report.dir}">
+                <fileset dir="${systemtest.compile.dir}">
+                    <include name="**/*Test.class"/>
+                </fileset>
+            </batchtest>
+        </junit>
+
+        <junitreport todir="${systemtest.report.dir}">
+            <fileset dir="${systemtest.report.dir}">
+                <include name="TEST-*.xml"/>
+            </fileset>
+            <report format="frames" todir="${systemtest.report.dir}/html"/>
+        </junitreport>
+
+    </target>
+
+    <target name="showproperties" depends="init">
+        <echoproperties/>
+    </target>
+
+    <target name="clean" >
+        <delete dir="${target.dir}" failonerror="false"/>
+    </target>
+
+    <target name="ivy-report" depends="init">
+        <mkdir dir="${ivy.report.dir}"/>
+        <ivy:report xml="false" graph="true" todir="${ivy.report.dir}"/>
+    </target>
+
+    <target name="javadoc" depends="init">
+        <mkdir dir="${javadoc.dir}"/>
+        <javadoc sourcepath="${src.dir}" destdir="${javadoc.dir}" classpathref="compile.classpath"/>
+    </target>
+
+    <target name="javadoc-zip" depends="javadoc">
+        <zip destfile="${target.dir}/javadoc.zip" basedir="${target.dir}/javadoc"/>
+    </target>
+
+    <property file="${common.root.dir}/build.properties"/>
+    <property name="common.script.dir" value="${common.root.dir}"/>
+    <macrodef name="check-script">
+        <attribute name="scriptname"/>
+        <sequential>
+            <get src="${script.svn.url}/@{scriptname}" dest="${target.dir}/tmp/@{scriptname}"/>
+            <checksum file="${target.dir}/tmp/@{scriptname}" property="@{scriptname}.checksum"/>
+            <checksum file="${common.script.dir}/@{scriptname}" property="${@{scriptname}.checksum}"
+                      verifyproperty="@{scriptname}.checksum.match"/>
+            <fail message="@{scriptname} is out of date, run the download-scripts target and commit the new scripts.">
+                <condition>
+                    <not>
+                        <istrue value="${@{scriptname}.checksum.match}"/>
+                    </not>
+                </condition>
+            </fail>
+        </sequential>
+    </macrodef>
+
+    <target name="check-scripts">
+        <mkdir dir="${target.dir}/tmp"/>
+
+        <check-script scriptname="common.xml"/>
+        <check-script scriptname="common-lib.xml"/>
+        <check-script scriptname="common-web.xml"/>
+        <check-script scriptname="common-standalone.xml"/>
+        <check-script scriptname="common-findbugs.xml"/>
+        <check-script scriptname="jetty.xml"/>
+        <check-script scriptname="tomcat.xml"/>
+        <check-script scriptname="netbeans-addon.xml"/>
+
+        <delete dir="${target.dir}/tmp"/>
+    </target>
+</project>

@@ -1,0 +1,73 @@
+<?xml version="1.0"?>
+
+<project xmlns:ivy="antlib:org.apache.ivy.ant"
+         name="tomcat" default="init-script" basedir=".">
+
+    <dirname property="tomcat.root.dir" file="${ant.file.tomcat}"/>
+    <property name="root.dir" value="${tomcat.root.dir}/.."/>
+
+    <property file="${root.dir}/tomcat.properties"/>
+    <property name="tomcat.task.file" value="${tomcat.root.dir}/tomcatTasks.properties"/>
+
+    <property name="dist.dir" value="${dist.dir}"/>
+
+    <check-prop propname="tomcat.server"/>
+    <check-prop propname="tomcat.manager.url"/>
+    <check-prop propname="tomcat.username"/>
+    <check-prop propname="tomcat.password"/>
+
+    <target name="init-script" depends="init">
+
+        <taskdef file="${tomcat.task.file}">
+            <classpath>
+                <path refid="script.classpath"/>
+            </classpath>
+        </taskdef>
+
+    </target>
+
+    <target name="deploy" depends="build-war, init-script" description="Deploy application in Tomcat">
+
+        <deploy url="${tomcat.manager.url}"
+                username="${tomcat.username}"
+                password="${tomcat.password}"
+                path="/${ant.project.name}"
+                war="file:${dist.dir}/${ant.project.name}.war"/>
+    </target>
+
+    <target name="reload" description="Reload application in Tomcat" depends="undeploy, deploy">
+    </target>
+
+    <target name="start" description="Start Tomcat application" depends="init-script">
+
+        <start url="${tomcat.manager.url}"
+               username="${tomcat.username}"
+               password="${tomcat.password}"
+               path="/${ant.project.name}"/>
+    </target>
+
+
+    <target name="undeploy" description="Undeploy application in Tomcat" depends="init-script">
+
+        <undeploy url="${tomcat.manager.url}"
+                  username="${tomcat.username}"
+                  password="${tomcat.password}"
+                  path="/${ant.project.name}"/>
+    </target>
+
+    <target name="stop" description="Stop Tomcat application" depends="init-script">
+
+        <stop url="${tomcat.manager.url}"
+              username="${tomcat.username}"
+              password="${tomcat.password}"
+              path="/${ant.project.name}"/>
+    </target>
+
+    <target name="list" description="List Tomcat applications" depends="init-script">
+
+        <list url="${tomcat.manager.url}"
+              username="${tomcat.username}"
+              password="${tomcat.password}"/>
+    </target>
+
+</project>

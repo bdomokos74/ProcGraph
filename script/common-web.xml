@@ -1,0 +1,52 @@
+<?xml version="1.0"?>
+<project xmlns:ivy="antlib:org.apache.ivy.ant" xmlns:artifact="antlib:org.apache.maven.artifact.ant"
+         name="common-web" default="build-war" basedir=".">
+
+    <import file="common.xml"/>
+
+    <property file="${root.dir}/repository.properties"/>
+
+    <property name="lib.dir" value="${dist.dir}/lib"/>
+    <property name="web.dir" value="${root.dir}/src/main/webapp"/>
+
+    <target name="build-war" depends="compile">
+
+        <mkdir dir="${dist.dir}"/>
+        <mkdir dir="${lib.dir}"/>
+
+        <ivy:retrieve pattern="${lib.dir}/[artifact]-[revision].jar" conf="default, runtime"/>
+
+        <war destfile="${dist.dir}/${ant.project.name}.war">
+            <classes dir="${compile.dir}"/>
+            <fileset dir="${web.dir}"/>
+            <lib dir="${lib.dir}"/>
+        </war>
+
+        <delete dir="${lib.dir}" failonerror="false"/>
+    </target>
+
+    <target name="-publish-war" depends="build-war">
+
+        <typedef resource="org/apache/maven/artifact/ant/antlib.xml"
+                 uri="antlib:org.apache.maven.artifact.ant"
+                 classpathref="script.classpath"/>
+
+        <ivy:makepom ivyfile="${root.dir}/ivy.xml" pomfile="${dist.dir}/pom.xml"/>
+
+        <!-- This changes the packaging of the generated pom to war, instead of jar -->
+        <!-- This is a hack. Replace it if you have better idea. -->
+        <replace dir="${dist.dir}" token=">jar" value=">war">
+            <include name="pom.xml"/>
+        </replace>
+
+    <artifact:deploy file="${dist.dir}/${ant.project.name}.war">
+        <remoteRepository url="${repo.url}">
+            <authentication username="${repo.username}" password="${repo.password}"/>
+        </remoteRepository>
+        <pom file="${dist.dir}/pom.xml"/>
+    </artifact:deploy>
+
+    <!--<delete file="${dist.dir}/pom.xml"/>-->
+    </target>
+
+</project>

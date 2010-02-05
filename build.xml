@@ -1,0 +1,31 @@
+<project xmlns:ivy="antlib:org.apache.ivy.ant" name="DRScreenTestDbCommon"
+         default="common-lib.build-jar" basedir=".">
+
+    <dirname property="root.dir" file="${ant.file.DRScreenTestDbCommon}"/>
+    <property  name="script.dir" value="${root.dir}/script" />
+
+    <property file="${user.home}/.build.local.properties" />
+    <property file="${root.dir}/build.properties" />
+
+    <target name="download-scripts" description="-> Downloads the common build scripts.">
+        <mkdir dir="${script.dir}"/>
+        <get src="${script.svn.url}/common.xml" dest="${script.dir}/common.xml"/>
+        <get src="${script.svn.url}/common-lib.xml" dest="${script.dir}/common-lib.xml"/>
+        <get src="${script.svn.url}/common-web.xml" dest="${script.dir}/common-web.xml"/>
+        <get src="${script.svn.url}/common-standalone.xml" dest="${script.dir}/common-standalone.xml"/>
+        <get src="${script.svn.url}/common-findbugs.xml" dest="${script.dir}/common-findbugs.xml"/>
+        <get src="${script.svn.url}/jetty.xml" dest="${script.dir}/jetty.xml"/>
+        <get src="${script.svn.url}/tomcat.xml" dest="${script.dir}/tomcat.xml"/>
+        <get src="${script.svn.url}/netbeans-addon.xml" dest="${script.dir}/netbeans-addon.xml"/>
+    </target>
+
+    <import file="${root.dir}/script/common-lib.xml" optional="true"/>
+    <import file="${root.dir}/script/common-findbugs.xml" optional="true"/>
+
+    <!--
+    This file should contain the project specific build targets. Do not put them in build.xml, use custom.xml.
+    -->
+    <import file="${root.dir}/custom.xml" optional="true"/>
+
+</project>
+   

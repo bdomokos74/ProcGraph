@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns:ivy="antlib:org.apache.ivy.ant"
+         name="netbeans-addon" basedir=".">
+
+    <target depends="build-war, reload" name="dist"></target>
+
+    <target depends="reload, start" name="run"></target>
+
+    <target name="rebuild" depends="clean, build-war, reload"></target>
+
+    <target name="run-deploy" depends="deploy"></target>
+    
+</project>
