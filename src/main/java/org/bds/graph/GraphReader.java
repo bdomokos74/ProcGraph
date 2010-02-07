@@ -28,6 +28,9 @@ public class GraphReader {
         int i = 0;
         ClassBasedEdgeFactory<String, ContigEdge> edgeFactory = new ClassBasedEdgeFactory(ContigEdge.class);
         while ((line = graphReader.readLine()) != null) {
+            if(line.indexOf("->") == -1) {
+                continue;
+            }
             String vertexes[] = line.split("( -> )|(;)");
             result.addVertex(vertexes[0]);
             result.addVertex(vertexes[1]);

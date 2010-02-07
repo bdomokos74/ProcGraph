@@ -1,0 +1,70 @@
+Graph {
+   @name="ContigGraph";
+   @description="Denovo contigs.";
+   @numNodes=7;
+   @numLinks=8;
+   @numPaths=0;
+   @numPathLinks=0;
+
+### structural data ###
+@links=[
+	{ @source=0; @destination=1; },
+	{ @source=0; @destination=2; },
+	{ @source=1; @destination=2; },
+	{ @source=0; @destination=3; },
+	{ @source=2; @destination=0; },
+	{ @source=2; @destination=4; },
+	{ @source=4; @destination=1; },
+	{ @source=5; @destination=6; }
+];
+@paths=;
+### attribute data ###
+   @enumerations=;
+   @attributeDefinitions= [
+  {
+   $root;
+   bool;
+   || false ||;
+   [
+    { 1; T; }
+   ];
+   ;
+   ;
+  },
+  {
+   $tree_link;
+   bool;
+   || false ||;
+   ;
+   [
+	{ 3; T; },
+	{ 2; T; },
+	{ 7; T; },
+	{ 5; T; },
+	{ 4; T; }
+];
+   ;
+  }
+];
+ [
+  {
+   $spanning_tree;
+   $default_spanning_tree;
+   ;
+   [ { 0; $root; }, { 1; $tree_link; } ];
+  }
+ ]; #@qualifiers=;
+
+   ### visualization hints ###
+   @filters=;
+   @selectors=;
+   @displays=;
+   @presentations=;
+
+   ### interface hints ###
+   @presentationMenus=;
+   @displayMenus=;
+   @selectorMenus=;
+   @filterMenus=;
+   @attributeMenus=;
+}

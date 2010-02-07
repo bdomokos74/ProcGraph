@@ -1,20 +1,15 @@
 import org.junit.Test;
 import static org.junit.Assert.assertEquals;
 import org.jgrapht.DirectedGraph;
+import org.jgrapht.UndirectedGraph;
+import org.jgrapht.Graphs;
 import org.jgrapht.alg.CycleDetector;
-import org.jgrapht.event.TraversalListener;
-import org.jgrapht.event.ConnectedComponentTraversalEvent;
-import org.jgrapht.event.EdgeTraversalEvent;
-import org.jgrapht.event.VertexTraversalEvent;
-import org.jgrapht.traverse.BreadthFirstIterator;
-import org.jgrapht.graph.DefaultEdge;
-import org.bds.graph.GraphReader;
-import org.bds.graph.ContigEdge;
+import org.jgrapht.alg.ConnectivityInspector;
+import org.bds.graph.*;
+import org.bds.test.TestHelper;
 
-import java.io.BufferedReader;
-import java.io.FileReader;
-import java.util.Set;
-import java.util.HashSet;
+import java.io.*;
+import java.util.*;
 
 import static junit.framework.Assert.assertTrue;
 
@@ -25,50 +20,159 @@ import static junit.framework.Assert.assertTrue;
  * Time: 9:32:53 PM
  */
 public class JGraphTTest {
+
     @Test
-    public void testStart() throws Exception {
-        GraphReader reader = new GraphReader(new BufferedReader(new FileReader("/home/balint/work/graph/edgelist-num.txt")));
-        final Set<String> processed = new HashSet<String>();
+    public void testSpanningtree() throws Exception {
 
-        final DirectedGraph<String, ContigEdge> graph = reader.read();
+        GraphReader reader = new GraphReader(new TestHelper().getResourceReader("/spanningtree_test.gv"));
+        DirectedGraph<String, ContigEdge> graph = reader.read();
+        Set<ContigEdge> tree = new SpanningTree(graph, true).getSpanningTree("1");
 
-        BreadthFirstIterator<String, ContigEdge> traverser = new BreadthFirstIterator(graph, "82");
-
-        traverser.addTraversalListener(new TraversalListener<String, ContigEdge>() {
-            @Override
-            public void connectedComponentFinished(ConnectedComponentTraversalEvent event) {
-            }
-
-            @Override
-            public void connectedComponentStarted(ConnectedComponentTraversalEvent event) {
-            }
-
-            @Override
-            public void edgeTraversed(EdgeTraversalEvent<String, ContigEdge> event) {
-                if (!processed.contains(graph.getEdgeTarget(event.getEdge()))) {
-//                System.out.printf("{ %s; T; %s-%s },\n", event.getEdge().getId() ,graph.getEdgeSource(event.getEdge()), graph.getEdgeTarget(event.getEdge()));
-                    System.out.printf("%s -> %s; %s;\n", graph.getEdgeSource(event.getEdge()), graph.getEdgeTarget(event.getEdge()),graph.edgesOf(graph.getEdgeSource(event.getEdge())).size());
-                }
-            }
-
-            @Override
-            public void vertexTraversed(VertexTraversalEvent<String> event) {
-            }
-
-            @Override
-            public void vertexFinished(VertexTraversalEvent<String> event) {
-            }
-        });
-
-        for (String curr = traverser.next(); traverser.hasNext(); curr = traverser.next()) {
-            processed.add(curr);
+        StringWriter strWriter = new StringWriter();
+        DotWriter writer = new DotWriter(new BufferedWriter(strWriter), DotWriter.Type.Directed);
+        for (ContigEdge edge : tree) {
+            writer.addEdge(graph.getEdgeSource(edge), graph.getEdgeTarget(edge));
         }
+        writer.close();
+
+        assertEquals(new TestHelper().resourceToString("/spanningtree_result.gv"), strWriter.toString());
     }
 
     @Test
-    public void testStart2() throws Exception {
-        GraphReader reader = new GraphReader(new BufferedReader(new FileReader("/home/balint/work/graph/spanningtree.txt")));
-        final DirectedGraph<String, ContigEdge> graph = reader.read();
-        assertEquals(true, new CycleDetector(graph).detectCycles());
+    public void testSpanningtree2() throws Exception {
+
+        GraphReader reader = new GraphReader(new TestHelper().getResourceReader("/example.gv"));
+        DirectedGraph<String, ContigEdge> graph = reader.read();
+        Set<ContigEdge> tree = new SpanningTree(graph, true).getSpanningTree("1");
+
+        StringWriter strWriter = new StringWriter();
+        DotWriter writer = new DotWriter(new BufferedWriter(strWriter), DotWriter.Type.Directed);
+        for (ContigEdge edge : tree) {
+            writer.addEdge(graph.getEdgeSource(edge), graph.getEdgeTarget(edge));
+        }
+        writer.close();
+
+        assertEquals(new TestHelper().resourceToString("/example_spanningtree.gv"), strWriter.toString());
+    }
+
+    @Test
+    public void test_libsea() throws Exception {
+        GraphReader reader = new GraphReader(new TestHelper().getResourceReader("/spanningtree_test.gv"));
+        DirectedGraph<String, ContigEdge> graph = reader.read();
+        StringWriter strWriter = new StringWriter();
+        LibSeaWriter writer = new LibSeaWriter(graph, new BufferedWriter(strWriter));
+        writer.write("1");
+        assertEquals(new TestHelper().resourceToString("/spanningtree_result.graph"), strWriter.toString());
+    }
+
+    @Test
+    public void test_libsea2() throws Exception {
+        GraphReader reader = new GraphReader(new TestHelper().getResourceReader("/example.gv"));
+        DirectedGraph<String, ContigEdge> graph = reader.read();
+        StringWriter strWriter = new StringWriter();
+        LibSeaWriter writer = new LibSeaWriter(graph, new BufferedWriter(strWriter));
+        writer.write("1");
+        assertEquals(new TestHelper().resourceToString("/example_gen.graph"), strWriter.toString());
+    }
+
+    public DirectedGraph<String, ContigEdge> getGraph() throws Exception {
+        GraphReader reader = new GraphReader(new BufferedReader(new FileReader("/Users/bds/Documents/projects/ProcGraph/edgelist-num0.txt")));
+        DirectedGraph<String, ContigEdge> graph = reader.read();
+        return graph;
+    }
+
+    @Test
+    public void testContigGraph() throws Exception {
+        GraphReader reader = new GraphReader(new BufferedReader(new FileReader("mapped1.gv")));
+        DirectedGraph<String, ContigEdge> graph = reader.read();
+
+        FileWriter fileWriter = new FileWriter("ww2.graph");
+        LibSeaWriter writer = new LibSeaWriter(graph, new BufferedWriter(fileWriter));
+        writer.write("1000");
+    }
+
+    @Test
+    public void testContigGraph_missingEdges() throws Exception {
+
+        DirectedGraph<String, ContigEdge> graph = getGraph();
+
+        ConnectivityInspector inspector = new ConnectivityInspector(graph);
+        List components = inspector.connectedSets();
+        assertEquals(true, inspector.isGraphConnected());
+
+        System.out.printf("components=%d", components.size());
+    }
+
+
+    @Test
+    public void testConvert() throws Exception {
+        DirectedGraph<String, ContigEdge> graph = getGraph();
+        List<Integer> list = new ArrayList<Integer>();
+        for (ContigEdge e : graph.edgeSet()) {
+
+            System.out.printf("%d -> %d;\n", Integer.valueOf(graph.getEdgeSource(e)).intValue() - 1, Integer.valueOf(graph.getEdgeTarget(e)).intValue() - 1);
+        }
+
+//        for(int i =0; i<=)
+    }
+
+    @Test
+    public void testEdges() throws Exception {
+        DirectedGraph<String, ContigEdge> graph = getGraph();
+        Set<String> vertexSet = graph.vertexSet();
+        Map<String, String> vertexMap = new HashMap<String, String>();
+        int i = 0;
+        for (String vertex : vertexSet) {
+            vertexMap.put(vertex, String.valueOf(i));
+            i++;
+        }
+
+
+//        DotWriter writer = new DotWriter(new BufferedWriter(new FileWriter("mapped.gv")), DotWriter.Type.Directed);
+//        for (ContigEdge edge: graph.edgeSet()) {
+//            writer.addEdge(vertexMap.get(graph.getEdgeSource(edge)), vertexMap.get(graph.getEdgeTarget(edge)));
+//        }
+//        writer.close();
+    }
+
+    @Test
+    public void testEdges2() throws Exception {
+        GraphReader reader = new GraphReader(new BufferedReader(new FileReader("mapped1.gv")));
+
+        DirectedGraph<String, ContigEdge> graph = reader.read();
+        Set<ContigEdge> tree = new SpanningTree(graph, true).getSpanningTree("0");
+
+        Set<String> vertexSet = graph.vertexSet();
+        Set<String> allNodes = new HashSet<String>();
+        allNodes.addAll(vertexSet);
+
+        for (ContigEdge e : tree) {
+            allNodes.remove(graph.getEdgeSource(e));
+            allNodes.remove(graph.getEdgeTarget(e));
+        }
+
+        System.out.printf("remaining:\n");
+        for (String node : allNodes) {
+            System.out.printf("%s, ", node);
+        }
+
+    }
+
+    @Test
+    public void testEdges3() throws Exception {
+        GraphReader reader = new GraphReader(new BufferedReader(new FileReader("mapped.gv")));
+
+        DirectedGraph<String, ContigEdge> graph = reader.read();
+        List<String> list = Arrays.asList("2108", "2208", "2215", "2273");
+        for (String node : list) {
+            System.out.printf("node %s:\n\tnum edges: %d\n", node, graph.edgesOf(node).size());
+            printNeighbours(graph, node);
+        }
+    }
+
+    private void printNeighbours(DirectedGraph<String, ContigEdge> graph, String node) {
+        for (ContigEdge edge : graph.edgesOf(node)) {
+            System.out.printf("\t%s  -> %s\n", graph.getEdgeSource(edge),graph.getEdgeTarget(edge));
+        }
     }
 }
